@@ -85,6 +85,21 @@ public class PlayerActivity extends AppCompatActivity {
                 .setMediaMetadata(new MediaMetadata.Builder().setTitle(title).build());
 
         if (url != null && url.startsWith("http")) {
+            b.setUri(Uri.parse(url));
+        } else if (url != null) {
+            b.setUri(Uri.fromFile(new File(url)));
+        }
+        if (srtPath != null && new File(srtPath).exists()) {
+            b.setSubtitleConfigurations(List.of(
+                    MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(new File(srtPath)))
+                            .setMimeType(MimeTypes.APPLICATION_SUBRIP)
+                            .setLanguage("fa")
+                            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                            .build()));
+        }
+        return b.build();
+    }
+
     /** Toggle main (source) audio vs Persian dub file, keeping position. */
     private void switchToDub(boolean dub) {
         if (usingDub == dub) return;
@@ -169,20 +184,3 @@ public class PlayerActivity extends AppCompatActivity {
         super.onDestroy();
     }
 }
-
-            b.setUri(Uri.parse(url));
-        } else if (url != null) {
-            b.setUri(Uri.fromFile(new File(url)));
-        }
-        if (srtPath != null && new File(srtPath).exists()) {
-            b.setSubtitleConfigurations(List.of(
-                    MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(new File(srtPath)))
-                            .setMimeType(MimeTypes.APPLICATION_SUBRIP)
-                            .setLanguage("fa")
-                            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-                            .build()));
-        }
-        return b.build();
-    }
-
-
