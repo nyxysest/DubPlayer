@@ -6,6 +6,6 @@
         android:title="@string/tab_home" />
     <item
         android:id="@+id/nav_library"
-        android:icon="@android:drawable/ic_menu_video_camera"
+        android:icon="@android:drawable/ic_menu_manage"
         android:title="@string/tab_library" />
 </menu>
