@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">دوب‌پلیر</string>
+    <string name="tab_home">خانه</string>
+    <string name="tab_library">کتابخانه</string>
+    <string name="tab_downloads">دانلودها</string>
+    <string name="tab_settings">تنظیمات</string>
+    <string name="search_hint">جستجوی ویدیو یا لینک یوتیوب…</string>
+    <string name="empty_library">هنوز ویدیویی نیست. یک لینک یوتیوب را جستجو یا در مرورگر Share کن.</string>
+    <string name="empty_downloads">چیزی دانلود نشده است.</string>
+    <string name="dub_track">دوبلهٔ فارسی</string>
+    <string name="orig_track">صدای اصلی</string>
+    <string name="sub_track">زیرنویس فارسی</string>
+    <string name="download">دانلود</string>
+    <string name="download_dub">دانلود + دوبله</string>
+    <string name="quality">کیفیت</string>
+    <string name="audio_track">صدا</string>
+    <string name="subtitle_track">زیرنویس</string>
+    <string name="speed">سرعت</string>
+    <string name="pip">تصویر در تصویر</string>
+    <string name="error_player">خطا در پخش</string>
+</resources>
