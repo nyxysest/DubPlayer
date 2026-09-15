@@ -13,11 +13,10 @@
         android:layout_weight="1"
         app:surface_type="surface_view"
         app:resize_mode="fit"
-        app:show_timeout="3000"
-        />
+        app:show_timeout="3000" />
 
-    <!-- Below-player info bar -->
     <LinearLayout
+        android:id="@+id/belowPlayer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -37,18 +36,32 @@
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
                 app:tint="@color/text_primary"
                 android:background="?selectableItemBackgroundBorderless"
-                android:contentDescription="بازگشت" />
+                android:contentDescription="Back" />
 
-            <TextView
-                android:id="@+id/title"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
-                android:textColor="@color/text_primary"
-                android:textSize="16sp"
-                android:maxLines="2"
-                android:ellipsize="end" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/state"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:maxLines="1" />
+            </LinearLayout>
         </LinearLayout>
 
         <HorizontalScrollView
@@ -68,13 +81,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/dub_track"
+                    android:checkable="true"
                     android:visibility="gone"
                     app:chipBackgroundColor="@color/chip_bg"
                     android:textColor="@color/text_primary" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipSub"
-                    style="@style/Widget.Material3.Chip.Filter"
+                    style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/subtitle_track"
@@ -83,7 +97,7 @@
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipQuality"
-                    style="@style/Widget.Material3.Chip.Filter"
+                    style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/quality"
@@ -92,16 +106,16 @@
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipSpeed"
-                    style="@style/Widget.Material3.Chip.Filter"
+                    style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/speed"
+                    android:text="Speed 1x"
                     app:chipBackgroundColor="@color/chip_bg"
                     android:textColor="@color/text_primary" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipPip"
-                    style="@style/Widget.Material3.Chip.Filter"
+                    style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/pip"
@@ -111,3 +125,4 @@
         </HorizontalScrollView>
     </LinearLayout>
 </LinearLayout>
+

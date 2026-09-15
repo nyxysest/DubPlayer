@@ -8,4 +8,9 @@
         android:id="@+id/nav_library"
         android:icon="@android:drawable/ic_menu_manage"
         android:title="@string/tab_library" />
+    <item
+        android:id="@+id/nav_downloads"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="@string/tab_downloads" />
 </menu>
+
