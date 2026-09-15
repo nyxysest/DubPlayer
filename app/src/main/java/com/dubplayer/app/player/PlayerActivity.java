@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.MediaItem.SubtitleConfiguration;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackParameters;
@@ -91,7 +92,7 @@ public class PlayerActivity extends AppCompatActivity {
         }
         if (srtPath != null && new File(srtPath).exists()) {
             b.setSubtitleConfigurations(List.of(
-                    MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(new File(srtPath)))
+                    SubtitleConfiguration.Builder(Uri.fromFile(new File(srtPath)))
                             .setMimeType(MimeTypes.APPLICATION_SUBRIP)
                             .setLanguage("fa")
                             .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)

@@ -14,7 +14,6 @@ public final class DubSubManager {
 
     public static File dubFile(String ytId)  { return new File(folderFor(ytId), "dubbed.mp4"); }
     public static File srtFile(String ytId)  { return new File(folderFor(ytId), "subtitles.fa.srt"); }
-    public static File srcFile(String ytId)  { return new File(itemFor(ytId) == null ? srcFileOf(ytId) : srcFileOf(ytId)); }
 
     public static VideoItem itemFor(String ytId) {
         File dub = dubFile(ytId), srt = srtFile(ytId), src = new File(folderFor(ytId), "source.mp4");
@@ -26,5 +25,5 @@ public final class DubSubManager {
                 dub.exists() ? dub.getAbsolutePath() : null,
                 srt.exists() ? srt.getAbsolutePath() : null);
     }
-    private static File srcFileOf(String ytId) { return new File(folderFor(ytId), "source.mp4"); }
+    public static File srcFile(String ytId) { return new File(folderFor(ytId), "source.mp4"); }
 }
