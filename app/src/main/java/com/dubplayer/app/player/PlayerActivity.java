@@ -14,6 +14,7 @@ import android.widget.Toast;
 
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
@@ -29,7 +30,6 @@ import androidx.media3.session.SessionToken;
 import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.TrackSelectionDialogBuilder;
 
-import com.bumptech.glide.Glide;
 import com.dubplayer.app.R;
 import com.google.android.material.chip.Chip;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -40,19 +40,20 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 /**
- * MEMORY v2 player (MediaController based):
- * - owns NO ExoPlayer: binds to PlaybackService via MediaController
- * - background audio + notification + PiP actually work
- * - dub/original toggle preserves position + subtitles + speed
- * - subtitle/quality dialogs from real Tracks (TrackSelectionDialogBuilder)
- * - keeps rotation state (position, dub, speed) via onSaveInstanceState
+ * MEMORY v3 player (MediaController based, merge-aware):
+ * - remote streams: single muxed / hls / dash OR merged video+audio
+ * - local dub toggle preserves position + subs + speed
+ * - rotation-safe via onSaveInstanceState
  */
 @OptIn(markerClass = UnstableApi.class)
 public class PlayerActivity extends AppCompatActivity {
 
     public static final String EXTRA_ID = "id";
     public static final String EXTRA_TITLE = "title";
-    public static final String EXTRA_URL = "url";
+    public static final String EXTRA_URL = "url";         // single stream url
+    public static final String EXTRA_MIME = "mime";       // hls | dash | null
+    public static final String EXTRA_VURL = "vurl";       // merged video url
+    public static final String EXTRA_AURL = "aurl";       // merged audio url
     public static final String EXTRA_DUB = "dubPath";
     public static final String EXTRA_SRT = "srtPath";
     public static final String EXTRA_THUMB = "thumb";
@@ -63,12 +64,11 @@ public class PlayerActivity extends AppCompatActivity {
     private PlayerView playerView;
     private TextView titleTv, stateTv;
     private Chip chipDub, chipSub, chipQ, chipSpd, chipPip;
-    private ImageButton btnBack;
 
     private ListenableFuture<MediaController> future;
     private MediaController controller;
 
-    private String videoId, title, url, dubPath, srtPath, thumb;
+    private String videoId, title, url, mime, vurl, aurl, dubPath, srtPath, thumb;
     private boolean usingDub;
     private int speedIdx = 2;
     private boolean controllerReady = false;
@@ -84,12 +84,16 @@ public class PlayerActivity extends AppCompatActivity {
         videoId = in.getStringExtra(EXTRA_ID);
         title = in.getStringExtra(EXTRA_TITLE);
         url = in.getStringExtra(EXTRA_URL);
+        mime = in.getStringExtra(EXTRA_MIME);
+        vurl = in.getStringExtra(EXTRA_VURL);
+        aurl = in.getStringExtra(EXTRA_AURL);
         dubPath = in.getStringExtra(EXTRA_DUB);
         srtPath = in.getStringExtra(EXTRA_SRT);
         thumb = in.getStringExtra(EXTRA_THUMB);
         if (videoId != null && videoId.startsWith("local:")) {
             url = videoId.substring(6);
             videoId = null;
+            mime = null; vurl = null; aurl = null;
         }
         usingDub = false;
         if (savedInstanceState != null) {
@@ -99,8 +103,7 @@ public class PlayerActivity extends AppCompatActivity {
             pendingAutoPlay = savedInstanceState.getBoolean("play", true);
         }
         if (savedInstanceState == null && dubPath != null && new File(dubPath).exists()) {
-            // autoplay the Persian dub when it exists
-            usingDub = true;
+            usingDub = true; // autoplay Persian dub when present
         }
 
         playerView = findViewById(R.id.playerView);
@@ -111,7 +114,7 @@ public class PlayerActivity extends AppCompatActivity {
         chipQ = findViewById(R.id.chipQuality);
         chipSpd = findViewById(R.id.chipSpeed);
         chipPip = findViewById(R.id.chipPip);
-        btnBack = findViewById(R.id.btnBack);
+        ImageButton btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
 
         titleTv.setText(title != null ? title : "DubPlayer");
@@ -163,9 +166,9 @@ public class PlayerActivity extends AppCompatActivity {
                     @Override
                     public void onPlayerError(PlaybackException e) {
                         stateTv.setText("");
+                        String msg = e.getMessage() != null ? e.getMessage() : ("code=" + e.errorCode);
                         Toast.makeText(PlayerActivity.this,
-                                getString(R.string.error_player, String.valueOf(e.getMessage())),
-                                Toast.LENGTH_LONG).show();
+                                getString(R.string.error_player, msg), Toast.LENGTH_LONG).show();
                     }
                     @Override
                     public void onTracksChanged(Tracks tracks) {
@@ -177,14 +180,16 @@ public class PlayerActivity extends AppCompatActivity {
             } catch (ExecutionException | InterruptedException e) {
                 Toast.makeText(this, getString(R.string.error_player, "service"), Toast.LENGTH_LONG).show();
             }
-        }, androidx.core.content.ContextCompat.getMainExecutor(this));
+        }, ContextCompat.getMainExecutor(this));
     }
 
     @Override
     protected void onStop() {
         if (controller != null) {
-            pendingPos = controller.getCurrentPosition();
-            pendingAutoPlay = controller.isPlaying();
+            try {
+                pendingPos = controller.getCurrentPosition();
+                pendingAutoPlay = controller.isPlaying();
+            } catch (Exception ignored) { }
         }
         playerView.setPlayer(null);
         if (future != null) {
@@ -213,10 +218,23 @@ public class PlayerActivity extends AppCompatActivity {
     // ---------------- source building ----------------
     private MediaItem buildItem() {
         String playUri;
-        if (usingDub && dubPath != null && new File(dubPath).exists()) playUri = dubPath;
-        else if (url != null) playUri = url;
-        else if (dubPath != null) playUri = dubPath;
-        else playUri = "";
+        int mode = 0; // 0 default, 1 hls, 2 dash, 3 merged
+        String audioUrl = null;
+        if (usingDub && dubPath != null && new File(dubPath).exists()) {
+            playUri = dubPath;
+        } else if (vurl != null && aurl != null) {
+            playUri = vurl;
+            audioUrl = aurl;
+            mode = 3;
+        } else if (url != null) {
+            playUri = url;
+            if ("hls".equals(mime)) mode = 1;
+            else if ("dash".equals(mime)) mode = 2;
+        } else if (dubPath != null) {
+            playUri = dubPath;
+        } else {
+            playUri = "";
+        }
 
         MediaItem.Builder b = new MediaItem.Builder()
                 .setMediaId(videoId != null ? videoId : playUri)
@@ -227,8 +245,12 @@ public class PlayerActivity extends AppCompatActivity {
         if (playUri.startsWith("http")) b.setUri(Uri.parse(playUri));
         else if (!playUri.isEmpty()) b.setUri(Uri.fromFile(new File(playUri)));
 
-        // Persian srt sidecar (NOT when playing the muxed dub - it has no external subs need
-        // unless user provided srt next to it; we keep subs in both cases when the file exists).
+        if (mode == 3 && audioUrl != null) {
+            b.setTag(new Object[]{3, audioUrl});
+        } else if (mode == 1 || mode == 2) {
+            b.setTag(mode);
+        }
+
         if (srtPath != null && new File(srtPath).exists()) {
             List<MediaItem.SubtitleConfiguration> subs = new ArrayList<>();
             subs.add(new MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(new File(srtPath)))
@@ -244,9 +266,14 @@ public class PlayerActivity extends AppCompatActivity {
 
     private void swapSource(boolean keepPos) {
         if (!controllerReady || controller == null) return;
+        MediaItem item = buildItem();
+        if (item.playbackProperties == null || item.playbackProperties.uri == null) {
+            Toast.makeText(this, R.string.error_stream, Toast.LENGTH_LONG).show();
+            return;
+        }
         long pos = keepPos ? controller.getCurrentPosition() : pendingPos;
         boolean play = keepPos ? controller.isPlaying() : pendingAutoPlay;
-        controller.setMediaItem(buildItem(), pos == C.TIME_UNSET ? 0 : pos);
+        controller.setMediaItem(item, pos == C.TIME_UNSET ? 0 : pos);
         controller.prepare();
         controller.setPlayWhenReady(play);
         pendingPos = C.TIME_UNSET;
@@ -280,7 +307,6 @@ public class PlayerActivity extends AppCompatActivity {
         b.build().show();
     }
 
-    // ---------------- PiP ----------------
     private void enterPip() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {
@@ -308,7 +334,6 @@ public class PlayerActivity extends AppCompatActivity {
             android.content.res.Configuration cfg) {
         super.onPictureInPictureModeChanged(inPip, cfg);
         findViewById(R.id.belowPlayer).setVisibility(inPip ? View.GONE : View.VISIBLE);
-        if (inPip) playerView.setUseController(false);
-        else playerView.setUseController(true);
+        playerView.setUseController(!inPip);
     }
 }

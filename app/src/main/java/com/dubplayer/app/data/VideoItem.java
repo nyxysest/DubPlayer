@@ -13,11 +13,16 @@ public class VideoItem {
     public final boolean hasSubs;
     public final String dubPath;
     public final String srtPath;
-    public final String streamUrl; // resolved http/hls url for remote videos (nullable)
+    // remote playback: either single (muxed mp4 / hls / dash) or video+audio pair
+    public final String streamUrl;
+    public final String videoUrl;
+    public final String audioUrl;
+    public final String streamMime; // M3U8 / MPD for single, else null
 
     public VideoItem(String id, String title, String channel, String thumbUrl,
                      long durationMs, boolean hasDub, boolean hasSubs,
-                     String dubPath, String srtPath, String streamUrl) {
+                     String dubPath, String srtPath,
+                     String streamUrl, String videoUrl, String audioUrl, String streamMime) {
         this.id = id;
         this.title = title;
         this.channel = channel;
@@ -28,12 +33,16 @@ public class VideoItem {
         this.dubPath = dubPath;
         this.srtPath = srtPath;
         this.streamUrl = streamUrl;
+        this.videoUrl = videoUrl;
+        this.audioUrl = audioUrl;
+        this.streamMime = streamMime;
     }
 
     public VideoItem(String id, String title, String channel, String thumbUrl,
                      long durationMs, boolean hasDub, boolean hasSubs,
                      String dubPath, String srtPath) {
-        this(id, title, channel, thumbUrl, durationMs, hasDub, hasSubs, dubPath, srtPath, null);
+        this(id, title, channel, thumbUrl, durationMs, hasDub, hasSubs,
+                dubPath, srtPath, null, null, null, null);
     }
 
     public boolean isLocal() { return id != null && id.startsWith("local:"); }
@@ -43,4 +52,8 @@ public class VideoItem {
 
     @Nullable
     public String ytId() { return isLocal() ? null : id; }
+
+    public boolean hasPlayable() {
+        return isLocal() || streamUrl != null || (videoUrl != null && audioUrl != null);
+    }
 }

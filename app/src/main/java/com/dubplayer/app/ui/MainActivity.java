@@ -198,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /** Direct open: local dub first, else resolve stream, then PlayerActivity. */
+    /** Direct open: local dub first, else resolve stream (single call), then PlayerActivity. */
     private void openById(final String ytId, final VideoItem seed) {
         progress.setVisibility(View.VISIBLE);
         bg.execute(() -> {
@@ -209,29 +209,31 @@ public class MainActivity extends AppCompatActivity {
             if (local != null) {
                 VideoItem merged = new VideoItem(local.id, title, channel, thumb,
                         seed != null ? seed.durationMs : 0,
-                        true, local.hasSubs, local.dubPath, local.srtPath, null);
+                        true, local.hasSubs, local.dubPath, local.srtPath,
+                        null, null, null, null);
                 main.post(() -> { progress.setVisibility(View.GONE); openPlayer(merged); });
                 return;
             }
-            String[] meta = YtSearch.fetchMeta(ytId);
-            String stream = YtSearch.resolveStream(ytId);
-            final String fTitle = meta[0] != null ? meta[0] : title;
-            final String fChannel = meta[1] != null ? meta[1] : channel;
-            if (stream == null) {
+            com.dubplayer.app.data.StreamRef ref = YtSearch.resolve(ytId);
+            if (ref == null || !ref.playable()) {
                 main.post(() -> {
                     progress.setVisibility(View.GONE);
                     Toast.makeText(MainActivity.this, R.string.error_stream, Toast.LENGTH_LONG).show();
                 });
                 return;
             }
-            VideoItem remote = new VideoItem(ytId, fTitle, fChannel, thumb, 0, false, false, null, null, stream);
+            VideoItem remote = new VideoItem(ytId,
+                    !ref.title.isEmpty() ? ref.title : title,
+                    !ref.author.isEmpty() ? ref.author : channel,
+                    thumb, 0, false, false, null, null,
+                    ref.single, ref.videoUrl, ref.audioUrl, ref.singleMime);
             main.post(() -> { progress.setVisibility(View.GONE); openPlayer(remote); });
         });
     }
 
     private void openPlayer(VideoItem v) {
         // resolve stream lazily on click if needed
-        if (!v.isLocal() && v.streamUrl == null && v.ytId() != null) {
+        if (!v.isLocal() && !v.hasPlayable() && v.ytId() != null) {
             openById(v.ytId(), v);
             return;
         }
@@ -239,6 +241,9 @@ public class MainActivity extends AppCompatActivity {
         i.putExtra(PlayerActivity.EXTRA_ID, v.id);
         i.putExtra(PlayerActivity.EXTRA_TITLE, v.title);
         i.putExtra(PlayerActivity.EXTRA_URL, v.streamUrl);
+        i.putExtra(PlayerActivity.EXTRA_MIME, v.streamMime);
+        i.putExtra(PlayerActivity.EXTRA_VURL, v.videoUrl);
+        i.putExtra(PlayerActivity.EXTRA_AURL, v.audioUrl);
         i.putExtra(PlayerActivity.EXTRA_DUB, v.dubPath);
         i.putExtra(PlayerActivity.EXTRA_SRT, v.srtPath);
         i.putExtra(PlayerActivity.EXTRA_THUMB, v.thumbUrl);
